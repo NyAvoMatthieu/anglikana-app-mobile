@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.example.anglikana_app_mobile"
-    compileSdk = flutter.compileSdkVersion
+    // compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
