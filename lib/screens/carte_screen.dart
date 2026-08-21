@@ -46,7 +46,7 @@ class _CarteScreenState extends State<CarteScreen> {
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
 
-  static const LatLng _defaultCenter = LatLng(5.3600, -4.0083); // Abidjan
+  static const LatLng _defaultCenter = LatLng(-18.8792, 45.5079); // Antananarivo
   static const double _defaultZoom = 7;
   static const String _tileUrlTemplate =
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
