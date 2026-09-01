@@ -102,7 +102,7 @@ class _CarteScreenState extends State<CarteScreen> {
   @override
   Widget build(BuildContext context) {
     final resultats = _eglisesFiltrees;
-    _zoomAutoSiNecessaire(resultats);
+    // _zoomAutoSiNecessaire(resultats);
 
     final markers = resultats
         .map((e) {
@@ -130,14 +130,20 @@ class _CarteScreenState extends State<CarteScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: TextField(
               controller: _searchController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Rechercher une église...',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.arrow_forward),
+                  tooltip: 'Valider la recherche',
+                  onPressed: _validerRecherche,
+                ),
                 filled: true,
                 isDense: true,
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
               onChanged: (value) => setState(() => _query = value),
+              onSubmitted: (_) => _validerRecherche(),
             ),
           ),
         ),
@@ -150,7 +156,10 @@ class _CarteScreenState extends State<CarteScreen> {
             districts: widget.districts,
             paroisses: widget.paroisses,
             selection: _selection,
-            onChanged: (selection) => setState(() => _selection = selection),
+            onChanged: (selection) {
+              setState(() => _selection = selection);
+              _validerRecherche();
+            },
           ),
           Expanded(
             child: FlutterMap(
@@ -180,5 +189,9 @@ class _CarteScreenState extends State<CarteScreen> {
         ],
       ),
     );
+  }
+
+  void _validerRecherche() {
+    _zoomAutoSiNecessaire(_eglisesFiltrees);
   }
 }

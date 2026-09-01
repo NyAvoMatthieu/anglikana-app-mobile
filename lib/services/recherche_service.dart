@@ -1,5 +1,9 @@
 import '../models/eglise.dart';
 import '../models/ressource.dart';
+import '../models/diocese.dart';
+import '../models/district.dart';
+import '../models/region.dart';
+import '../models/paroisse.dart';
 
 /// Fonctions de recherche texte, insensibles à la casse et aux accents,
 /// opérant sur des listes déjà chargées en mémoire (le module Base locale /
@@ -43,5 +47,38 @@ class RechercheService {
       final adresseOk = r.adresse != null && _normalise(r.adresse!).contains(q);
       return nomOk || adresseOk;
     }).toList();
+  }
+
+  static List<Diocese> rechercherDioceses(
+    List<Diocese> dioceses,
+    String query,
+  ) {
+    final q = _normalise(query.trim());
+    if (q.isEmpty) return dioceses;
+    return dioceses.where((d) => _normalise(d.nom).contains(q)).toList();
+  }
+
+  static List<Region> rechercherRegions(List<Region> regions, String query) {
+    final q = _normalise(query.trim());
+    if (q.isEmpty) return regions;
+    return regions.where((r) => _normalise(r.nom).contains(q)).toList();
+  }
+
+  static List<District> rechercherDistricts(
+    List<District> districts,
+    String query,
+  ) {
+    final q = _normalise(query.trim());
+    if (q.isEmpty) return districts;
+    return districts.where((d) => _normalise(d.nom).contains(q)).toList();
+  }
+
+  static List<Paroisse> rechercherParoisses(
+    List<Paroisse> paroisses,
+    String query,
+  ) {
+    final q = _normalise(query.trim());
+    if (q.isEmpty) return paroisses;
+    return paroisses.where((p) => _normalise(p.nom).contains(q)).toList();
   }
 }

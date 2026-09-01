@@ -11,6 +11,7 @@ import 'models/region.dart';
 import 'models/ressource.dart';
 import 'screens/carte_screen.dart';
 import 'services/offline_map_service.dart';
+import 'database/debug_qgis.dart'; // pour debugger les coordonnées GPS des églises avec QGIS
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +26,8 @@ Future<void> main() async {
   final paroisses = await AcaRepository.chargerParoisses();
   final eglises = await AcaRepository.chargerEglises();
   final ressources = await AcaRepository.chargerRessources();
+
+  await DebugQgis.inspecter(); // inspecter les donnees QGIS
 
   runApp(
     MyApp(
