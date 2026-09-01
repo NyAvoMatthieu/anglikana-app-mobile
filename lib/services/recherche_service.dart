@@ -3,6 +3,7 @@ import '../models/ressource.dart';
 import '../models/diocese.dart';
 import '../models/district.dart';
 import '../models/region.dart';
+import '../models/paroisse.dart';
 
 /// Fonctions de recherche texte, insensibles à la casse et aux accents,
 /// opérant sur des listes déjà chargées en mémoire (le module Base locale /
@@ -70,5 +71,14 @@ class RechercheService {
     final q = _normalise(query.trim());
     if (q.isEmpty) return districts;
     return districts.where((d) => _normalise(d.nom).contains(q)).toList();
+  }
+
+  static List<Paroisse> rechercherParoisses(
+    List<Paroisse> paroisses,
+    String query,
+  ) {
+    final q = _normalise(query.trim());
+    if (q.isEmpty) return paroisses;
+    return paroisses.where((p) => _normalise(p.nom).contains(q)).toList();
   }
 }
