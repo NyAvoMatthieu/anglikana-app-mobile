@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'database/aca_repository.dart';
 import 'database/database_helper.dart';
@@ -14,11 +17,24 @@ import 'services/offline_map_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialiser SQLite pour les applications desktop.
+  // Android et iOS continuent d'utiliser leur implémentation habituelle.
+  if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
+  // Initialiser le service de cartes hors ligne.
   await OfflineMapService.initialise();
 
-  await DatabaseHelper.instance.database; // ouvre/crée la base SQLite
+  // Ouvrir ou créer la base de données SQLite.
+  await DatabaseHelper.instance.database;
+
+  // Insérer les données de test si la base est vide.
   await DonneesTest.insererSiVide();
 
+  // Charger les données de l'application.
   final dioceses = await AcaRepository.chargerDioceses();
   final regions = await AcaRepository.chargerRegions();
   final districts = await AcaRepository.chargerDistricts();
@@ -61,7 +77,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'ACA',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+        ),
       ),
       home: CarteScreen(
         dioceses: dioceses,
