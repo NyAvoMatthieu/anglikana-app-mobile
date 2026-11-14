@@ -22,6 +22,33 @@ class GeoUtils {
     return null;
   }
 
+  static List<LatLng>? parsePolygon(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    final value = raw.trim();
+
+    try {
+      final match = RegExp(
+        r'^POLYGON\s*\(\(\s*(.*?)\s*\)\)$',
+        caseSensitive: false,
+        dotAll: true,
+      ).firstMatch(value);
+      if (match == null) return null;
+
+      final points = <LatLng>[];
+      for (final pair in match.group(1)!.split(',')) {
+        final values = pair.trim().split(RegExp(r'\s+'));
+        if (values.length < 2) return null;
+        final lon = double.tryParse(values[0]);
+        final lat = double.tryParse(values[1]);
+        if (lon == null || lat == null) return null;
+        points.add(LatLng(lat, lon));
+      }
+      return points.length >= 3 ? points : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static LatLng? _parseWktPoint(String wkt) {
     final match = RegExp(
       r'POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)',
