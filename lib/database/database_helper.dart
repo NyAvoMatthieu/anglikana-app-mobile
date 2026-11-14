@@ -16,7 +16,7 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._();
 
   static const String _dbName = 'aca.db';
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 3;
 
   Database? _database;
 
@@ -32,6 +32,17 @@ class DatabaseHelper {
       version: _dbVersion,
       onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: _onCreate,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 3) {
+          final columns = await db.rawQuery('PRAGMA table_info(region)');
+          final hasCarteQgis = columns.any(
+            (column) => column['name'] == 'carte_qgis',
+          );
+          if (!hasCarteQgis) {
+            await db.execute('ALTER TABLE region ADD COLUMN carte_qgis TEXT');
+          }
+        }
+      },
     );
   }
 
@@ -94,6 +105,7 @@ class DatabaseHelper {
       CREATE TABLE region (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nom TEXT NOT NULL,
+        carte_qgis TEXT,
         diocese_id INTEGER REFERENCES diocese(id) ON DELETE CASCADE,
         responsable_id INTEGER REFERENCES clerge(id) ON DELETE SET NULL
       )

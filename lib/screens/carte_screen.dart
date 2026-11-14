@@ -57,9 +57,12 @@ class _CarteScreenState extends State<CarteScreen> {
   FiltreHierarchieSelection _selection = const FiltreHierarchieSelection();
   String _query = '';
   String _dioceseQuery = '';
+  String _regionQuery = '';
   String _districtQuery = '';
   Diocese? _dioceseSelectionne;
   Diocese? _dioceseValide;
+  Region? _regionSelectionnee;
+  Region? _regionValidee;
   District? _districtSelectionne;
   District? _districtValide;
   int? _derniereSignature;
@@ -76,6 +79,19 @@ class _CarteScreenState extends State<CarteScreen> {
 
   List<LatLng>? get _polygoneDiocese =>
       GeoUtils.parsePolygon(_dioceseValide?.carteQgis);
+
+  List<Region> get _regionsCorrespondantes {
+    final query = RechercheService.normaliser(_regionQuery.trim());
+    if (query.isEmpty) return const [];
+    return widget.regions
+        .where(
+          (region) => RechercheService.normaliser(region.nom).contains(query),
+        )
+        .toList();
+  }
+
+  List<LatLng>? get _polygoneRegion =>
+      GeoUtils.parsePolygon(_regionValidee?.carteQgis);
 
   List<District> get _districtsCorrespondants {
     final query = RechercheService.normaliser(_districtQuery.trim());
@@ -99,7 +115,16 @@ class _CarteScreenState extends State<CarteScreen> {
 
   List<LatLng>? get _polygoneAffiche => _query.trim().isNotEmpty
       ? null
-      : _polygoneDistrict ?? (_dioceseEstSeulFiltre ? _polygoneDiocese : null);
+      : _polygoneDistrict ??
+            (_selection.districtId == null && _selection.regionId != null
+                ? _polygoneRegion
+                : (_dioceseEstSeulFiltre ? _polygoneDiocese : null));
+
+  Color get _couleurPolygone {
+    if (_polygoneDistrict != null) return Colors.green;
+    if (_selection.regionId != null) return Colors.yellow;
+    return Colors.blue;
+  }
 
   List<Eglise> get _eglisesFiltrees {
     final parHierarchie = FiltreHierarchieService.appliquerSurEglises(
@@ -138,6 +163,21 @@ class _CarteScreenState extends State<CarteScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      if (polygone != null) {
+        final center = LatLng(
+          points.map((point) => point.latitude).reduce((a, b) => a + b) /
+              points.length,
+          points.map((point) => point.longitude).reduce((a, b) => a + b) /
+              points.length,
+        );
+        final zoom = _selection.districtId != null
+            ? 11.0
+            : _selection.regionId != null
+            ? 9.0
+            : 8.0;
+        _mapController.move(center, zoom);
+        return;
+      }
       if (points.length == 1) {
         _mapController.move(points.first, 15);
         return;
@@ -243,6 +283,48 @@ class _CarteScreenState extends State<CarteScreen> {
                 const SizedBox(height: 8),
                 TextField(
                   decoration: const InputDecoration(
+                    labelText: 'Rechercher une région',
+                    hintText: 'Nom de la région',
+                    prefixIcon: Icon(Icons.search),
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => setState(() {
+                    _regionQuery = value;
+                    _regionSelectionnee = null;
+                  }),
+                ),
+                if (_regionSelectionnee == null &&
+                    _regionsCorrespondantes.isNotEmpty)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 140),
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: _regionsCorrespondantes
+                          .map(
+                            (region) => ListTile(
+                              dense: true,
+                              title: Text(region.nom),
+                              onTap: () => setState(() {
+                                _regionSelectionnee = region;
+                                _regionQuery = region.nom;
+                              }),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                if (_regionSelectionnee != null)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton(
+                      onPressed: _validerRegion,
+                      child: const Text('Valider la région'),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                TextField(
+                  decoration: const InputDecoration(
                     labelText: 'Rechercher un district',
                     hintText: 'Nom du district',
                     prefixIcon: Icon(Icons.search),
@@ -314,8 +396,8 @@ class _CarteScreenState extends State<CarteScreen> {
                     polygons: [
                       Polygon(
                         points: polygone,
-                        color: Colors.blue.withValues(alpha: 0.25),
-                        borderColor: Colors.blue,
+                        color: _couleurPolygone.withValues(alpha: 0.25),
+                        borderColor: _couleurPolygone,
                         borderStrokeWidth: 3,
                       ),
                     ],
@@ -365,6 +447,9 @@ class _CarteScreenState extends State<CarteScreen> {
     setState(() {
       _selection = selection;
       _dioceseValide = diocese;
+      _regionValidee = null;
+      _regionSelectionnee = null;
+      _regionQuery = '';
       _districtValide = null;
       _districtSelectionne = null;
       _districtQuery = '';
@@ -374,6 +459,16 @@ class _CarteScreenState extends State<CarteScreen> {
             _districtValide = candidat;
             _districtSelectionne = candidat;
             _districtQuery = candidat.nom;
+            break;
+          }
+        }
+      }
+      if (selection.regionId != null) {
+        for (final candidat in widget.regions) {
+          if (candidat.id == selection.regionId) {
+            _regionValidee = candidat;
+            _regionSelectionnee = candidat;
+            _regionQuery = candidat.nom;
             break;
           }
         }
@@ -414,6 +509,28 @@ class _CarteScreenState extends State<CarteScreen> {
         dioceseId: region?.dioceseId,
         regionId: region?.id,
         districtId: district.id,
+      ),
+    );
+  }
+
+  void _validerRegion() {
+    final region = _regionSelectionnee;
+    if (region == null) return;
+    if (GeoUtils.parsePolygon(region.carteQgis) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Les coordonnées du polygone de cette région sont invalides.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    _appliquerSelectionHierarchie(
+      FiltreHierarchieSelection(
+        dioceseId: region.dioceseId,
+        regionId: region.id,
       ),
     );
   }

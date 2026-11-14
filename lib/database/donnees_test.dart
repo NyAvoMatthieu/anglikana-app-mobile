@@ -21,9 +21,17 @@ class DonneesTest {
   static const _nomEgliseDioceseTest = 'Église Anglicane du Diocèse';
   static const _polygoneDistrictTest =
       'POLYGON((45.0 -19.2, 45.3 -19.2, 45.3 -19.0, 45.0 -19.0, 45.0 -19.2))';
+  static const _polygoneRegionTest =
+      'POLYGON((44.8 -19.5, 45.5 -19.5, 45.5 -18.5, 44.8 -18.5, 44.8 -19.5))';
 
   static Future<void> insererSiVide() async {
     final db = DatabaseHelper.instance;
+    await (await db.database).update(
+      'region',
+      {'carte_qgis': _polygoneRegionTest},
+      where: 'nom = ?',
+      whereArgs: ['Analamanga'],
+    );
     final diocesesExistants = await db.tout('diocese');
     if (diocesesExistants.isNotEmpty) {
       final dioceseTest = await db.tout(
@@ -59,6 +67,8 @@ class DonneesTest {
         polygone:
             'POLYGON((49.8 -17.8, 50.8 -17.8, 50.8 -18.8, 49.8 -18.8, 49.8 -17.8))',
         nomRegion: 'Atsinanana',
+        polygoneRegion:
+            'POLYGON((49.5 -19.0, 51.0 -19.0, 51.0 -17.5, 49.5 -17.5, 49.5 -19.0))',
         nomDistrict: 'District Toamasina',
         polygoneDistrict:
             'POLYGON((50.0 -18.3, 50.4 -18.3, 50.4 -18.0, 50.0 -18.0, 50.0 -18.3))',
@@ -70,8 +80,10 @@ class DonneesTest {
         db,
         nomDiocese: 'Diocèse de Fianarantsoa',
         polygone:
-            'POLYGON((46.7 -21.0, 47.7 -21.0, 47.7 -22.0, 46.7 -22.0, 46.7 -21.0))',
+            'POLYGON((46.7 -21.0, 47.2 -20.8, 47.7 -21.0, 47.7 -22.0, 47.2 -22.2, 46.7 -22.0, 46.7 -21.0))',
         nomRegion: 'Haute Matsiatra',
+        polygoneRegion:
+            'POLYGON((46.4 -22.3, 48.0 -22.3, 48.0 -20.7, 46.4 -20.7, 46.4 -22.3))',
         nomDistrict: 'District Fianarantsoa',
         polygoneDistrict:
             'POLYGON((46.9 -21.6, 47.3 -21.6, 47.3 -21.3, 46.9 -21.3, 46.9 -21.6))',
@@ -92,7 +104,11 @@ class DonneesTest {
     );
     final regionId = await db.inserer(
       'region',
-      Region(nom: 'Analamanga', dioceseId: dioceseId).toJson(),
+      Region(
+        nom: 'Analamanga',
+        carteQgis: _polygoneRegionTest,
+        dioceseId: dioceseId,
+      ).toJson(),
     );
     final districtId = await db.inserer(
       'district',
@@ -147,6 +163,8 @@ class DonneesTest {
       polygone:
           'POLYGON((49.8 -17.8, 50.8 -17.8, 50.8 -18.8, 49.8 -18.8, 49.8 -17.8))',
       nomRegion: 'Atsinanana',
+      polygoneRegion:
+          'POLYGON((49.5 -19.0, 51.0 -19.0, 51.0 -17.5, 49.5 -17.5, 49.5 -19.0))',
       nomDistrict: 'District Toamasina',
       polygoneDistrict:
           'POLYGON((50.0 -18.3, 50.4 -18.3, 50.4 -18.0, 50.0 -18.0, 50.0 -18.3))',
@@ -158,8 +176,10 @@ class DonneesTest {
       db,
       nomDiocese: 'Diocèse de Fianarantsoa',
       polygone:
-          'POLYGON((46.7 -21.0, 47.7 -21.0, 47.7 -22.0, 46.7 -22.0, 46.7 -21.0))',
+          'POLYGON((46.7 -21.0, 47.2 -20.8, 47.7 -21.0, 47.7 -22.0, 47.2 -22.2, 46.7 -22.0, 46.7 -21.0))',
       nomRegion: 'Haute Matsiatra',
+      polygoneRegion:
+          'POLYGON((46.4 -22.3, 48.0 -22.3, 48.0 -20.7, 46.4 -20.7, 46.4 -22.3))',
       nomDistrict: 'District Fianarantsoa',
       polygoneDistrict:
           'POLYGON((46.9 -21.6, 47.3 -21.6, 47.3 -21.3, 46.9 -21.3, 46.9 -21.6))',
@@ -196,6 +216,7 @@ class DonneesTest {
     required String nomDiocese,
     required String polygone,
     required String nomRegion,
+    required String polygoneRegion,
     required String nomDistrict,
     required String polygoneDistrict,
     required String nomParoisse,
@@ -208,6 +229,18 @@ class DonneesTest {
       whereArgs: [nomDiocese],
     );
     if (diocese.isNotEmpty) {
+      // await (await db.database).update(
+      //   'diocese',
+      //   {'carte_qgis': polygone},
+      //   where: 'id = ?',
+      //   whereArgs: [diocese.first['id']],
+      // );
+      await (await db.database).update(
+        'region',
+        {'carte_qgis': polygoneRegion},
+        where: 'nom = ?',
+        whereArgs: [nomRegion],
+      );
       final district = await db.tout(
         'district',
         where: 'nom = ?',
@@ -257,7 +290,11 @@ class DonneesTest {
     );
     final regionId = await db.inserer(
       'region',
-      Region(nom: nomRegion, dioceseId: dioceseId).toJson(),
+      Region(
+        nom: nomRegion,
+        carteQgis: polygoneRegion,
+        dioceseId: dioceseId,
+      ).toJson(),
     );
     final districtId = await db.inserer(
       'district',
