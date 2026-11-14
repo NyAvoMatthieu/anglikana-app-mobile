@@ -235,77 +235,88 @@ class _CarteScreenState extends State<CarteScreen> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: Card(
-              elevation: 2,
-              clipBehavior: Clip.antiAlias,
-              child: ExpansionTile(
-                initiallyExpanded: true,
-                tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-                childrenPadding:
-                    const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                title: const Text(
-                  'Filtres géographiques',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                child: Card(
+                  elevation: 2,
+                  clipBehavior: Clip.antiAlias,
+                  child: ExpansionTile(
+                    initiallyExpanded: true,
+                    tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                    childrenPadding:
+                        const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    title: const Text(
+                      'Filtres géographiques',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text('Diocèse, région et district'),
+                    leading: const Icon(Icons.filter_alt),
+                    children: [
+                      _buildRechercheHierarchie(
+                        label: 'Diocèse',
+                        hint: 'Nom du diocèse',
+                        query: _dioceseQuery,
+                        selection: _dioceseSelectionne,
+                        suggestions: _diocesesCorrespondants,
+                        nomDe: (diocese) => diocese.nom,
+                        onChanged: (value) => setState(() {
+                          _dioceseQuery = value;
+                          _dioceseSelectionne = null;
+                        }),
+                        onSelected: (diocese) {
+                          setState(() {
+                            _dioceseSelectionne = diocese;
+                            _dioceseQuery = diocese.nom;
+                          });
+                          _validerDiocese();
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _buildRechercheHierarchie(
+                        label: 'Région',
+                        hint: 'Nom de la région',
+                        query: _regionQuery,
+                        selection: _regionSelectionnee,
+                        suggestions: _regionsCorrespondantes,
+                        nomDe: (region) => region.nom,
+                        onChanged: (value) => setState(() {
+                          _regionQuery = value;
+                          _regionSelectionnee = null;
+                        }),
+                        onSelected: (region) {
+                          setState(() {
+                            _regionSelectionnee = region;
+                            _regionQuery = region.nom;
+                          });
+                          _validerRegion();
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      _buildRechercheHierarchie(
+                        label: 'District',
+                        hint: 'Nom du district',
+                        query: _districtQuery,
+                        selection: _districtSelectionne,
+                        suggestions: _districtsCorrespondants,
+                        nomDe: (district) => district.nom,
+                        onChanged: (value) => setState(() {
+                          _districtQuery = value;
+                          _districtSelectionne = null;
+                        }),
+                        onSelected: (district) {
+                          setState(() {
+                            _districtSelectionne = district;
+                            _districtQuery = district.nom;
+                          });
+                          _validerDistrict();
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-                subtitle: const Text('Diocèse, région et district'),
-                leading: const Icon(Icons.filter_alt),
-                children: [
-                  _buildRechercheHierarchie(
-                    label: 'Diocèse',
-                    hint: 'Nom du diocèse',
-                    query: _dioceseQuery,
-                    selection: _dioceseSelectionne,
-                    suggestions: _diocesesCorrespondants,
-                    nomDe: (diocese) => diocese.nom,
-                    onChanged: (value) => setState(() {
-                      _dioceseQuery = value;
-                      _dioceseSelectionne = null;
-                    }),
-                    onSelected: (diocese) => setState(() {
-                      _dioceseSelectionne = diocese;
-                      _dioceseQuery = diocese.nom;
-                    }),
-                    onValidate: _validerDiocese,
-                  ),
-                  const SizedBox(height: 8),
-                  _buildRechercheHierarchie(
-                    label: 'Région',
-                    hint: 'Nom de la région',
-                    query: _regionQuery,
-                    selection: _regionSelectionnee,
-                    suggestions: _regionsCorrespondantes,
-                    nomDe: (region) => region.nom,
-                    onChanged: (value) => setState(() {
-                      _regionQuery = value;
-                      _regionSelectionnee = null;
-                    }),
-                    onSelected: (region) => setState(() {
-                      _regionSelectionnee = region;
-                      _regionQuery = region.nom;
-                    }),
-                    onValidate: _validerRegion,
-                  ),
-                  const SizedBox(height: 8),
-                  _buildRechercheHierarchie(
-                    label: 'District',
-                    hint: 'Nom du district',
-                    query: _districtQuery,
-                    selection: _districtSelectionne,
-                    suggestions: _districtsCorrespondants,
-                    nomDe: (district) => district.nom,
-                    onChanged: (value) => setState(() {
-                      _districtQuery = value;
-                      _districtSelectionne = null;
-                    }),
-                    onSelected: (district) => setState(() {
-                      _districtSelectionne = district;
-                      _districtQuery = district.nom;
-                    }),
-                    onValidate: _validerDistrict,
-                  ),
-                ],
               ),
             ),
           ),
@@ -379,7 +390,6 @@ class _CarteScreenState extends State<CarteScreen> {
     required String Function(T) nomDe,
     required ValueChanged<String> onChanged,
     required ValueChanged<T> onSelected,
-    required VoidCallback onValidate,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,13 +401,8 @@ class _CarteScreenState extends State<CarteScreen> {
             prefixIcon: const Icon(Icons.search),
             filled: true,
             isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: const OutlineInputBorder(),
-            suffixIcon: selection != null
-                ? IconButton(
-                    onPressed: onValidate,
-                    icon: const Icon(Icons.check_circle_outline),
-                  )
-                : null,
           ),
           onChanged: onChanged,
         ),
