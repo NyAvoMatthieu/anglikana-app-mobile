@@ -19,6 +19,8 @@ class DonneesTest {
   static const _polygoneDioceseTest =
       'POLYGON((45.4 -18.4, 44.60 -18.4, 44.60 -19.4, 45.4 -19.4, 45.4 -18.4))';
   static const _nomEgliseDioceseTest = 'Église Anglicane du Diocèse';
+  static const _polygoneDistrictTest =
+      'POLYGON((45.0 -19.2, 45.3 -19.2, 45.3 -19.0, 45.0 -19.0, 45.0 -19.2))';
 
   static Future<void> insererSiVide() async {
     final db = DatabaseHelper.instance;
@@ -44,6 +46,12 @@ class DonneesTest {
         if (paroisse.isNotEmpty) {
           await _insererEgliseTestSiAbsente(db, paroisse.first['id'] as int);
         }
+        await (await db.database).update(
+          'district',
+          {'carte_qgis': _polygoneDistrictTest},
+          where: 'nom = ?',
+          whereArgs: ['District Antananarivo'],
+        );
       }
       await _insererDioceseAvecEgliseSiAbsent(
         db,
@@ -52,6 +60,8 @@ class DonneesTest {
             'POLYGON((49.8 -17.8, 50.8 -17.8, 50.8 -18.8, 49.8 -18.8, 49.8 -17.8))',
         nomRegion: 'Atsinanana',
         nomDistrict: 'District Toamasina',
+        polygoneDistrict:
+            'POLYGON((50.0 -18.3, 50.4 -18.3, 50.4 -18.0, 50.0 -18.0, 50.0 -18.3))',
         nomParoisse: 'Paroisse Toamasina-Centre',
         nomEglise: 'Église Anglicane de Toamasina',
         localisation: 'POINT(50.2 -18.15)',
@@ -63,6 +73,8 @@ class DonneesTest {
             'POLYGON((46.7 -21.0, 47.7 -21.0, 47.7 -22.0, 46.7 -22.0, 46.7 -21.0))',
         nomRegion: 'Haute Matsiatra',
         nomDistrict: 'District Fianarantsoa',
+        polygoneDistrict:
+            'POLYGON((46.9 -21.6, 47.3 -21.6, 47.3 -21.3, 46.9 -21.3, 46.9 -21.6))',
         nomParoisse: 'Paroisse Fianarantsoa-Centre',
         nomEglise: 'Église Anglicane de Fianarantsoa',
         localisation: 'POINT(47.1 -21.45)',
@@ -84,7 +96,11 @@ class DonneesTest {
     );
     final districtId = await db.inserer(
       'district',
-      District(nom: 'District Antananarivo', regionId: regionId).toJson(),
+      District(
+        nom: 'District Antananarivo',
+        carteQgis: _polygoneDistrictTest,
+        regionId: regionId,
+      ).toJson(),
     );
     final paroisseCentreId = await db.inserer(
       'paroisse',
@@ -132,6 +148,8 @@ class DonneesTest {
           'POLYGON((49.8 -17.8, 50.8 -17.8, 50.8 -18.8, 49.8 -18.8, 49.8 -17.8))',
       nomRegion: 'Atsinanana',
       nomDistrict: 'District Toamasina',
+      polygoneDistrict:
+          'POLYGON((50.0 -18.3, 50.4 -18.3, 50.4 -18.0, 50.0 -18.0, 50.0 -18.3))',
       nomParoisse: 'Paroisse Toamasina-Centre',
       nomEglise: 'Église Anglicane de Toamasina',
       localisation: 'POINT(50.2 -18.15)',
@@ -143,6 +161,8 @@ class DonneesTest {
           'POLYGON((46.7 -21.0, 47.7 -21.0, 47.7 -22.0, 46.7 -22.0, 46.7 -21.0))',
       nomRegion: 'Haute Matsiatra',
       nomDistrict: 'District Fianarantsoa',
+      polygoneDistrict:
+          'POLYGON((46.9 -21.6, 47.3 -21.6, 47.3 -21.3, 46.9 -21.3, 46.9 -21.6))',
       nomParoisse: 'Paroisse Fianarantsoa-Centre',
       nomEglise: 'Église Anglicane de Fianarantsoa',
       localisation: 'POINT(47.1 -21.45)',
@@ -177,6 +197,7 @@ class DonneesTest {
     required String polygone,
     required String nomRegion,
     required String nomDistrict,
+    required String polygoneDistrict,
     required String nomParoisse,
     required String nomEglise,
     required String localisation,
@@ -186,7 +207,45 @@ class DonneesTest {
       where: 'nom = ?',
       whereArgs: [nomDiocese],
     );
-    if (diocese.isNotEmpty) return;
+    if (diocese.isNotEmpty) {
+      final district = await db.tout(
+        'district',
+        where: 'nom = ?',
+        whereArgs: [nomDistrict],
+      );
+      if (district.isNotEmpty) {
+        await (await db.database).update(
+          'district',
+          {'carte_qgis': polygoneDistrict},
+          where: 'id = ?',
+          whereArgs: [district.first['id']],
+        );
+        final paroisses = await db.tout(
+          'paroisse',
+          where: 'district_id = ?',
+          whereArgs: [district.first['id']],
+        );
+        if (paroisses.isNotEmpty) {
+          final eglises = await db.tout(
+            'eglise',
+            where: 'nom = ?',
+            whereArgs: [nomEglise],
+          );
+          if (eglises.isEmpty) {
+            await db.inserer(
+              'eglise',
+              Eglise(
+                nom: nomEglise,
+                adresse: 'Dans le diocèse de test',
+                localisation: localisation,
+                paroisseId: paroisses.first['id'] as int,
+              ).toJson(),
+            );
+          }
+        }
+      }
+      return;
+    }
 
     final dioceseId = await db.inserer(
       'diocese',
@@ -202,7 +261,11 @@ class DonneesTest {
     );
     final districtId = await db.inserer(
       'district',
-      District(nom: nomDistrict, regionId: regionId).toJson(),
+      District(
+        nom: nomDistrict,
+        carteQgis: polygoneDistrict,
+        regionId: regionId,
+      ).toJson(),
     );
     final paroisseId = await db.inserer(
       'paroisse',

@@ -57,8 +57,11 @@ class _CarteScreenState extends State<CarteScreen> {
   FiltreHierarchieSelection _selection = const FiltreHierarchieSelection();
   String _query = '';
   String _dioceseQuery = '';
+  String _districtQuery = '';
   Diocese? _dioceseSelectionne;
   Diocese? _dioceseValide;
+  District? _districtSelectionne;
+  District? _districtValide;
   int? _derniereSignature;
 
   List<Diocese> get _diocesesCorrespondants {
@@ -74,14 +77,29 @@ class _CarteScreenState extends State<CarteScreen> {
   List<LatLng>? get _polygoneDiocese =>
       GeoUtils.parsePolygon(_dioceseValide?.carteQgis);
 
+  List<District> get _districtsCorrespondants {
+    final query = RechercheService.normaliser(_districtQuery.trim());
+    if (query.isEmpty) return const [];
+    return widget.districts
+        .where(
+          (district) =>
+              RechercheService.normaliser(district.nom).contains(query),
+        )
+        .toList();
+  }
+
+  List<LatLng>? get _polygoneDistrict =>
+      GeoUtils.parsePolygon(_districtValide?.carteQgis);
+
   bool get _dioceseEstSeulFiltre =>
       _selection.dioceseId != null &&
       _selection.regionId == null &&
       _selection.districtId == null &&
       _selection.paroisseId == null;
 
-  List<LatLng>? get _polygoneAffiche =>
-      _query.trim().isEmpty && _dioceseEstSeulFiltre ? _polygoneDiocese : null;
+  List<LatLng>? get _polygoneAffiche => _query.trim().isNotEmpty
+      ? null
+      : _polygoneDistrict ?? (_dioceseEstSeulFiltre ? _polygoneDiocese : null);
 
   List<Eglise> get _eglisesFiltrees {
     final parHierarchie = FiltreHierarchieService.appliquerSurEglises(
@@ -222,6 +240,48 @@ class _CarteScreenState extends State<CarteScreen> {
                       child: const Text('Valider le diocèse'),
                     ),
                   ),
+                const SizedBox(height: 8),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Rechercher un district',
+                    hintText: 'Nom du district',
+                    prefixIcon: Icon(Icons.search),
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => setState(() {
+                    _districtQuery = value;
+                    _districtSelectionne = null;
+                  }),
+                ),
+                if (_districtSelectionne == null &&
+                    _districtsCorrespondants.isNotEmpty)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 140),
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: _districtsCorrespondants
+                          .map(
+                            (district) => ListTile(
+                              dense: true,
+                              title: Text(district.nom),
+                              onTap: () => setState(() {
+                                _districtSelectionne = district;
+                                _districtQuery = district.nom;
+                              }),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                if (_districtSelectionne != null)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton(
+                      onPressed: _validerDistrict,
+                      child: const Text('Valider le district'),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -305,6 +365,19 @@ class _CarteScreenState extends State<CarteScreen> {
     setState(() {
       _selection = selection;
       _dioceseValide = diocese;
+      _districtValide = null;
+      _districtSelectionne = null;
+      _districtQuery = '';
+      if (selection.districtId != null) {
+        for (final candidat in widget.districts) {
+          if (candidat.id == selection.districtId) {
+            _districtValide = candidat;
+            _districtSelectionne = candidat;
+            _districtQuery = candidat.nom;
+            break;
+          }
+        }
+      }
       if (diocese != null) {
         _dioceseQuery = diocese.nom;
         _dioceseSelectionne = diocese;
@@ -313,5 +386,35 @@ class _CarteScreenState extends State<CarteScreen> {
         _dioceseSelectionne = null;
       }
     });
+  }
+
+  void _validerDistrict() {
+    final district = _districtSelectionne;
+    if (district == null) return;
+    if (GeoUtils.parsePolygon(district.carteQgis) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Les coordonnées du polygone de ce district sont invalides.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    Region? region;
+    for (final candidat in widget.regions) {
+      if (candidat.id == district.regionId) {
+        region = candidat;
+        break;
+      }
+    }
+    _appliquerSelectionHierarchie(
+      FiltreHierarchieSelection(
+        dioceseId: region?.dioceseId,
+        regionId: region?.id,
+        districtId: district.id,
+      ),
+    );
   }
 }
