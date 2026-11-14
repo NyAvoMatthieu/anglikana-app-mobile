@@ -237,143 +237,97 @@ class _CarteScreenState extends State<CarteScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: Column(
-              children: [
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Rechercher un diocèse',
-                    hintText: 'Nom du diocèse',
-                    prefixIcon: Icon(Icons.search),
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (value) => setState(() {
-                    _dioceseQuery = value;
-                    _dioceseSelectionne = null;
-                  }),
+            child: Card(
+              elevation: 2,
+              clipBehavior: Clip.antiAlias,
+              child: ExpansionTile(
+                initiallyExpanded: true,
+                tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                childrenPadding:
+                    const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                title: const Text(
+                  'Filtres géographiques',
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
-                if (_dioceseSelectionne == null &&
-                    _diocesesCorrespondants.isNotEmpty)
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 140),
-                    child: ListView(
-                      shrinkWrap: true,
-                      children: _diocesesCorrespondants
-                          .map(
-                            (diocese) => ListTile(
-                              dense: true,
-                              title: Text(diocese.nom),
-                              onTap: () => setState(() {
-                                _dioceseSelectionne = diocese;
-                                _dioceseQuery = diocese.nom;
-                              }),
-                            ),
-                          )
-                          .toList(),
-                    ),
+                subtitle: const Text('Diocèse, région et district'),
+                leading: const Icon(Icons.filter_alt),
+                children: [
+                  _buildRechercheHierarchie(
+                    label: 'Diocèse',
+                    hint: 'Nom du diocèse',
+                    query: _dioceseQuery,
+                    selection: _dioceseSelectionne,
+                    suggestions: _diocesesCorrespondants,
+                    nomDe: (diocese) => diocese.nom,
+                    onChanged: (value) => setState(() {
+                      _dioceseQuery = value;
+                      _dioceseSelectionne = null;
+                    }),
+                    onSelected: (diocese) => setState(() {
+                      _dioceseSelectionne = diocese;
+                      _dioceseQuery = diocese.nom;
+                    }),
+                    onValidate: _validerDiocese,
                   ),
-                if (_dioceseSelectionne != null)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton(
-                      onPressed: _validerDiocese,
-                      child: const Text('Valider le diocèse'),
-                    ),
+                  const SizedBox(height: 8),
+                  _buildRechercheHierarchie(
+                    label: 'Région',
+                    hint: 'Nom de la région',
+                    query: _regionQuery,
+                    selection: _regionSelectionnee,
+                    suggestions: _regionsCorrespondantes,
+                    nomDe: (region) => region.nom,
+                    onChanged: (value) => setState(() {
+                      _regionQuery = value;
+                      _regionSelectionnee = null;
+                    }),
+                    onSelected: (region) => setState(() {
+                      _regionSelectionnee = region;
+                      _regionQuery = region.nom;
+                    }),
+                    onValidate: _validerRegion,
                   ),
-                const SizedBox(height: 8),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Rechercher une région',
-                    hintText: 'Nom de la région',
-                    prefixIcon: Icon(Icons.search),
-                    isDense: true,
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 8),
+                  _buildRechercheHierarchie(
+                    label: 'District',
+                    hint: 'Nom du district',
+                    query: _districtQuery,
+                    selection: _districtSelectionne,
+                    suggestions: _districtsCorrespondants,
+                    nomDe: (district) => district.nom,
+                    onChanged: (value) => setState(() {
+                      _districtQuery = value;
+                      _districtSelectionne = null;
+                    }),
+                    onSelected: (district) => setState(() {
+                      _districtSelectionne = district;
+                      _districtQuery = district.nom;
+                    }),
+                    onValidate: _validerDistrict,
                   ),
-                  onChanged: (value) => setState(() {
-                    _regionQuery = value;
-                    _regionSelectionnee = null;
-                  }),
-                ),
-                if (_regionSelectionnee == null &&
-                    _regionsCorrespondantes.isNotEmpty)
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 140),
-                    child: ListView(
-                      shrinkWrap: true,
-                      children: _regionsCorrespondantes
-                          .map(
-                            (region) => ListTile(
-                              dense: true,
-                              title: Text(region.nom),
-                              onTap: () => setState(() {
-                                _regionSelectionnee = region;
-                                _regionQuery = region.nom;
-                              }),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-                if (_regionSelectionnee != null)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton(
-                      onPressed: _validerRegion,
-                      child: const Text('Valider la région'),
-                    ),
-                  ),
-                const SizedBox(height: 8),
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Rechercher un district',
-                    hintText: 'Nom du district',
-                    prefixIcon: Icon(Icons.search),
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (value) => setState(() {
-                    _districtQuery = value;
-                    _districtSelectionne = null;
-                  }),
-                ),
-                if (_districtSelectionne == null &&
-                    _districtsCorrespondants.isNotEmpty)
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 140),
-                    child: ListView(
-                      shrinkWrap: true,
-                      children: _districtsCorrespondants
-                          .map(
-                            (district) => ListTile(
-                              dense: true,
-                              title: Text(district.nom),
-                              onTap: () => setState(() {
-                                _districtSelectionne = district;
-                                _districtQuery = district.nom;
-                              }),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-                if (_districtSelectionne != null)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton(
-                      onPressed: _validerDistrict,
-                      child: const Text('Valider le district'),
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
-          FiltreHierarchieBar(
-            dioceses: widget.dioceses,
-            regions: widget.regions,
-            districts: widget.districts,
-            paroisses: widget.paroisses,
-            selection: _selection,
-            onChanged: _appliquerSelectionHierarchie,
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer.withAlpha(20),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).dividerColor,
+                width: 1,
+              ),
+            ),
+            child: FiltreHierarchieBar(
+              dioceses: widget.dioceses,
+              regions: widget.regions,
+              districts: widget.districts,
+              paroisses: widget.paroisses,
+              selection: _selection,
+              onChanged: _appliquerSelectionHierarchie,
+            ),
           ),
           Expanded(
             child: FlutterMap(
@@ -413,6 +367,57 @@ class _CarteScreenState extends State<CarteScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildRechercheHierarchie<T>({
+    required String label,
+    required String hint,
+    required String query,
+    required T? selection,
+    required List<T> suggestions,
+    required String Function(T) nomDe,
+    required ValueChanged<String> onChanged,
+    required ValueChanged<T> onSelected,
+    required VoidCallback onValidate,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            prefixIcon: const Icon(Icons.search),
+            filled: true,
+            isDense: true,
+            border: const OutlineInputBorder(),
+            suffixIcon: selection != null
+                ? IconButton(
+                    onPressed: onValidate,
+                    icon: const Icon(Icons.check_circle_outline),
+                  )
+                : null,
+          ),
+          onChanged: onChanged,
+        ),
+        if (selection == null && suggestions.isNotEmpty)
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 140),
+            child: ListView(
+              shrinkWrap: true,
+              children: suggestions
+                  .map(
+                    (item) => ListTile(
+                      dense: true,
+                      title: Text(nomDe(item)),
+                      onTap: () => onSelected(item),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+      ],
     );
   }
 
