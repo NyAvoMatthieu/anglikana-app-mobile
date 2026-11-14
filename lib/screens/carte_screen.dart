@@ -231,7 +231,7 @@ class _CarteScreenState extends State<CarteScreen> {
             districts: widget.districts,
             paroisses: widget.paroisses,
             selection: _selection,
-            onChanged: (selection) => setState(() => _selection = selection),
+            onChanged: _appliquerSelectionHierarchie,
           ),
           Expanded(
             child: FlutterMap(
@@ -291,6 +291,27 @@ class _CarteScreenState extends State<CarteScreen> {
     setState(() {
       _dioceseValide = diocese;
       _selection = FiltreHierarchieSelection(dioceseId: diocese.id);
+    });
+  }
+
+  void _appliquerSelectionHierarchie(FiltreHierarchieSelection selection) {
+    Diocese? diocese;
+    for (final candidat in widget.dioceses) {
+      if (candidat.id == selection.dioceseId) {
+        diocese = candidat;
+        break;
+      }
+    }
+    setState(() {
+      _selection = selection;
+      _dioceseValide = diocese;
+      if (diocese != null) {
+        _dioceseQuery = diocese.nom;
+        _dioceseSelectionne = diocese;
+      } else {
+        _dioceseQuery = '';
+        _dioceseSelectionne = null;
+      }
     });
   }
 }

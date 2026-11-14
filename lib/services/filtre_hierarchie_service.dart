@@ -37,9 +37,18 @@ class FiltreHierarchieService {
     return toutes.where((r) => r.dioceseId == dioceseId).toList();
   }
 
-  static List<District> districtsPour(List<District> tous, int? regionId) {
-    if (regionId == null) return tous;
-    return tous.where((d) => d.regionId == regionId).toList();
+  static List<District> districtsPour(
+    List<District> tous,
+    int? regionId, {
+    Set<int>? regionIds,
+  }) {
+    if (regionId != null) {
+      return tous.where((d) => d.regionId == regionId).toList();
+    }
+    if (regionIds != null) {
+      return tous.where((d) => regionIds.contains(d.regionId)).toList();
+    }
+    return tous;
   }
 
   static List<Paroisse> paroissesPour(List<Paroisse> toutes, int? districtId) {

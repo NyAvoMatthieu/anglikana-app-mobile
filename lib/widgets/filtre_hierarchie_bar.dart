@@ -33,9 +33,16 @@ class FiltreHierarchieBar extends StatelessWidget {
       regions,
       selection.dioceseId,
     );
+    final regionIds = regionsDispo
+        .map((region) => region.id)
+        .whereType<int>()
+        .toSet();
     final districtsDispo = FiltreHierarchieService.districtsPour(
       districts,
       selection.regionId,
+      regionIds: selection.regionId == null && selection.dioceseId != null
+          ? regionIds
+          : null,
     );
     final paroissesDispo = FiltreHierarchieService.paroissesPour(
       paroisses,
