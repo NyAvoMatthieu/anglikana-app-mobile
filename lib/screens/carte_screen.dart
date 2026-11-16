@@ -5,12 +5,14 @@ import 'package:latlong2/latlong.dart';
 import '../models/diocese.dart';
 import '../models/district.dart';
 import '../models/eglise.dart';
+import '../models/eglise_details.dart';
 import '../models/paroisse.dart';
 import '../models/region.dart';
 import '../models/ressource.dart';
 import '../services/filtre_hierarchie_service.dart';
 import '../services/offline_map_service.dart';
 import '../services/recherche_service.dart';
+import '../database/aca_repository.dart';
 import '../utils/geo_utils.dart';
 import '../widgets/filtre_hierarchie_bar.dart';
 
@@ -206,7 +208,10 @@ class _CarteScreenState extends State<CarteScreen> {
             height: 40,
             child: Tooltip(
               message: e.nom,
-              child: const Icon(Icons.church, color: Colors.deepPurple),
+              child: GestureDetector(
+                onTap: () => _afficherDetailsEglise(e),
+                child: const Icon(Icons.church, color: Colors.deepPurple),
+              ),
             ),
           );
         })
@@ -436,6 +441,24 @@ class _CarteScreenState extends State<CarteScreen> {
     });
   }
 
+  Future<void> _afficherDetailsEglise(Eglise eglise) async {
+    if (eglise.id == null) return;
+    final details = await AcaRepository.chargerDetailsEglise(eglise.id!);
+    if (!mounted) return;
+    if (details == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible de charger cette église.')),
+      );
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _DetailsEgliseSheet(details: details),
+    );
+  }
+
   void _appliquerSelectionHierarchie(FiltreHierarchieSelection selection) {
     Diocese? diocese;
     for (final candidat in widget.dioceses) {
@@ -444,6 +467,7 @@ class _CarteScreenState extends State<CarteScreen> {
         break;
       }
     }
+
     setState(() {
       _selection = selection;
       _dioceseValide = diocese;
@@ -532,6 +556,58 @@ class _CarteScreenState extends State<CarteScreen> {
         dioceseId: region.dioceseId,
         regionId: region.id,
       ),
+    );
+  }
+}
+
+class _DetailsEgliseSheet extends StatelessWidget {
+  final EgliseDetails details;
+
+  const _DetailsEgliseSheet({required this.details});
+
+  @override
+  Widget build(BuildContext context) {
+    final eglise = details.eglise;
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(eglise.nom, style: Theme.of(context).textTheme.headlineSmall),
+            const SizedBox(height: 16),
+            _detail('Adresse', eglise.adresse),
+            _detail('Localisation', eglise.localisation),
+            _detail('Historique', eglise.historique),
+            _detail('Lien Facebook', eglise.lienFacebook),
+            _detail('Responsable', details.responsableNom),
+            const SizedBox(height: 12),
+            Text(
+              'Horaires de culte',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            if (details.horaires.isEmpty)
+              const Text('Aucun horaire renseigné.')
+            else
+              ...details.horaires.map(
+                (horaire) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(horaire.jour),
+                  subtitle: Text(horaire.libelle ?? 'Culte'),
+                  trailing: Text('${horaire.debut} - ${horaire.fin}'),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detail(String label, String? value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text('$label : ${value?.trim().isNotEmpty == true ? value : '-'}'),
     );
   }
 }

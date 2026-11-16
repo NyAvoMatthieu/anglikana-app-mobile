@@ -1,6 +1,8 @@
 import '../models/diocese.dart';
 import '../models/district.dart';
 import '../models/eglise.dart';
+import '../models/horaire_culte.dart';
+import '../models/clerge.dart';
 import '../models/paroisse.dart';
 import '../models/region.dart';
 import 'database_helper.dart';
@@ -91,6 +93,7 @@ class DonneesTest {
         nomEglise: 'Église Anglicane de Fianarantsoa',
         localisation: 'POINT(47.1 -21.45)',
       );
+      await _completerDetailsEglisesTest(db);
       return;
     }
 
@@ -187,6 +190,57 @@ class DonneesTest {
       nomEglise: 'Église Anglicane de Fianarantsoa',
       localisation: 'POINT(47.1 -21.45)',
     );
+    await _completerDetailsEglisesTest(db);
+  }
+
+  static Future<void> _completerDetailsEglisesTest(DatabaseHelper db) async {
+    final responsable = await db.tout(
+      'clerge',
+      where: 'nom = ? AND prenom = ?',
+      whereArgs: ['Rakoto', 'Responsable'],
+    );
+    final responsableId = responsable.isNotEmpty
+        ? responsable.first['id'] as int
+        : await db.inserer(
+            'clerge',
+            Clerge(
+              nom: 'Rakoto',
+              prenom: 'Responsable',
+              hierarchie: 'Responsable d’église',
+            ).toJson(),
+          );
+    final eglises = await db.tout('eglise');
+    final database = await db.database;
+    for (final ligne in eglises) {
+      final egliseId = ligne['id'] as int;
+      await database.update(
+        'eglise',
+        {
+          'historique': 'Église de test utilisée pour la démonstration.',
+          'lien_facebook': 'https://facebook.com/aca.test',
+          'responsable_id': responsableId,
+        },
+        where: 'id = ?',
+        whereArgs: [egliseId],
+      );
+      final horaires = await db.tout(
+        'horaire_culte',
+        where: 'eglise_id = ?',
+        whereArgs: [egliseId],
+      );
+      if (horaires.isEmpty) {
+        await db.inserer(
+          'horaire_culte',
+          HoraireCulte(
+            jour: 'Dimanche',
+            libelle: 'Culte principal',
+            debut: '21:00',
+            fin: '22:30',
+            egliseId: egliseId,
+          ).toJson(),
+        );
+      }
+    }
   }
 
   static Future<void> _insererEgliseTestSiAbsente(
