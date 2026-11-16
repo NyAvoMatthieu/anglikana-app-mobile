@@ -21,6 +21,10 @@ class DonneesTest {
   static const _polygoneDioceseTest =
       'POLYGON((45.4 -18.4, 44.60 -18.4, 44.60 -19.4, 45.4 -19.4, 45.4 -18.4))';
   static const _nomEgliseDioceseTest = 'Église Anglicane du Diocèse';
+  static const _nomEgliseHorairesTest =
+      'Église Anglicane Test des Deux Horaires';
+  static const _nomEgliseSansFacebookTest =
+      'Église Anglicane Test Sans Facebook';
   static const _polygoneDistrictTest =
       'POLYGON((45.0 -19.2, 45.3 -19.2, 45.3 -19.0, 45.0 -19.0, 45.0 -19.2))';
   static const _polygoneRegionTest =
@@ -55,6 +59,11 @@ class DonneesTest {
         );
         if (paroisse.isNotEmpty) {
           await _insererEgliseTestSiAbsente(db, paroisse.first['id'] as int);
+          await _insererEgliseAvecHorairesTest(db, paroisse.first['id'] as int);
+          await _insererEgliseSansFacebookTest(
+            db,
+            paroisse.first['id'] as int,
+          );
         }
         await (await db.database).update(
           'district',
@@ -93,7 +102,6 @@ class DonneesTest {
         nomEglise: 'Église Anglicane de Fianarantsoa',
         localisation: 'POINT(47.1 -21.45)',
       );
-      await _completerDetailsEglisesTest(db);
       return;
     }
 
@@ -142,6 +150,8 @@ class DonneesTest {
       ).toJson(),
     );
     await _insererEgliseTestSiAbsente(db, paroisseCentreId);
+    await _insererEgliseAvecHorairesTest(db, paroisseCentreId);
+    await _insererEgliseSansFacebookTest(db, paroisseCentreId);
     await db.inserer(
       'eglise',
       Eglise(
@@ -190,56 +200,141 @@ class DonneesTest {
       nomEglise: 'Église Anglicane de Fianarantsoa',
       localisation: 'POINT(47.1 -21.45)',
     );
-    await _completerDetailsEglisesTest(db);
   }
 
-  static Future<void> _completerDetailsEglisesTest(DatabaseHelper db) async {
+  static Future<void> _insererEgliseAvecHorairesTest(
+    DatabaseHelper db,
+    int paroisseId,
+  ) async {
+    final existante = await db.tout(
+      'eglise',
+      where: 'nom = ?',
+      whereArgs: [_nomEgliseHorairesTest],
+    );
+    final egliseId = existante.isNotEmpty
+        ? existante.first['id'] as int
+        : await db.inserer(
+            'eglise',
+            Eglise(
+              nom: _nomEgliseHorairesTest,
+              adresse: '12 rue de la Foi, Antananarivo',
+              localisation: 'POINT(47.5350 -18.9000)',
+              historique:
+                  'Église créée pour tester les horaires liés à une église.',
+              lienFacebook: 'https://facebook.com/eglise.test.horaires',
+              paroisseId: paroisseId,
+            ).toJson(),
+          );
+    await (await db.database).update(
+      'eglise',
+      {
+        'adresse': '12 rue de la Foi, Antananarivo',
+        'localisation': 'POINT(47.5350 -18.9000)',
+        'historique':
+            'Église créée pour tester les horaires liés à une église.',
+        'lien_facebook': 'https://facebook.com/eglise.test.horaires',
+      },
+      where: 'id = ?',
+      whereArgs: [egliseId],
+    );
+    final horairesExistants = await db.tout(
+      'horaire_culte',
+      where: 'eglise_id = ?',
+      whereArgs: [egliseId],
+    );
+    if (horairesExistants.length >= 2) return;
+
+    final horaires = [
+      HoraireCulte(
+        jour: 'Dimanche',
+        libelle: 'Culte dominical',
+        debut: '09:00',
+        fin: '11:00',
+        egliseId: egliseId,
+      ),
+      HoraireCulte(
+        jour: 'Mercredi',
+        libelle: 'Culte du soir',
+        debut: '21:00',
+        fin: '22:30',
+        egliseId: egliseId,
+      ),
+    ];
+    for (final horaire in horaires.skip(horairesExistants.length)) {
+      await db.inserer('horaire_culte', horaire.toJson());
+    }
+
+  }
+
+  static Future<void> _insererEgliseSansFacebookTest(
+    DatabaseHelper db,
+    int paroisseId,
+  ) async {
+    final existante = await db.tout(
+      'eglise',
+      where: 'nom = ?',
+      whereArgs: [_nomEgliseSansFacebookTest],
+    );
     final responsable = await db.tout(
       'clerge',
       where: 'nom = ? AND prenom = ?',
-      whereArgs: ['Rakoto', 'Responsable'],
+      whereArgs: ['Andrianina', 'Miora'],
     );
     final responsableId = responsable.isNotEmpty
         ? responsable.first['id'] as int
         : await db.inserer(
             'clerge',
             Clerge(
-              nom: 'Rakoto',
-              prenom: 'Responsable',
+              nom: 'Andrianina',
+              prenom: 'Miora',
               hierarchie: 'Responsable d’église',
             ).toJson(),
           );
-    final eglises = await db.tout('eglise');
-    final database = await db.database;
-    for (final ligne in eglises) {
-      final egliseId = ligne['id'] as int;
-      await database.update(
-        'eglise',
-        {
-          'historique': 'Église de test utilisée pour la démonstration.',
-          'lien_facebook': 'https://facebook.com/aca.test',
-          'responsable_id': responsableId,
-        },
-        where: 'id = ?',
-        whereArgs: [egliseId],
-      );
-      final horaires = await db.tout(
+    final egliseId = existante.isNotEmpty
+        ? existante.first['id'] as int
+        : await db.inserer(
+            'eglise',
+            Eglise(
+              nom: _nomEgliseSansFacebookTest,
+              adresse: '8 avenue de la Grâce, Antananarivo',
+              localisation: 'POINT(47.5450 -18.8950)',
+              historique:
+                  'Église de test dont le lien Facebook est volontairement absent.',
+              responsableId: responsableId,
+              paroisseId: paroisseId,
+            ).toJson(),
+          );
+
+    await (await db.database).update(
+      'eglise',
+      {
+        'adresse': '8 avenue de la Grâce, Antananarivo',
+        'localisation': 'POINT(47.5450 -18.8950)',
+        'historique':
+            'Église de test dont le lien Facebook est volontairement absent.',
+        'lien_facebook': null,
+        'responsable_id': responsableId,
+      },
+      where: 'id = ?',
+      whereArgs: [egliseId],
+    );
+
+    final horaires = await db.tout(
+      'horaire_culte',
+      where: 'eglise_id = ?',
+      whereArgs: [egliseId],
+    );
+    if (horaires.isEmpty) {
+      await db.inserer(
         'horaire_culte',
-        where: 'eglise_id = ?',
-        whereArgs: [egliseId],
+        HoraireCulte(
+          jour: 'Samedi',
+          libelle: 'Culte du soir',
+          debut: '18:00',
+          fin: '19:30',
+          egliseId: egliseId,
+        ).toJson(),
       );
-      if (horaires.isEmpty) {
-        await db.inserer(
-          'horaire_culte',
-          HoraireCulte(
-            jour: 'Dimanche',
-            libelle: 'Culte principal',
-            debut: '21:00',
-            fin: '22:30',
-            egliseId: egliseId,
-          ).toJson(),
-        );
-      }
     }
   }
 
