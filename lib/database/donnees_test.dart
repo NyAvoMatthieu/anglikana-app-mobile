@@ -26,6 +26,8 @@ class DonneesTest {
       'Église Anglicane Test des Deux Horaires';
   static const _nomEgliseSansFacebookTest =
       'Église Anglicane Test Sans Facebook';
+  static const _nomEgliseCompleteTest =
+      'Église Anglicane Sainte-Marie';
   static const _polygoneDistrictTest =
       'POLYGON((45.0 -19.2, 45.3 -19.2, 45.3 -19.0, 45.0 -19.0, 45.0 -19.2))';
   static const _polygoneRegionTest =
@@ -65,6 +67,7 @@ class DonneesTest {
             db,
             paroisse.first['id'] as int,
           );
+          await _insererEgliseCompleteTest(db, paroisse.first['id'] as int);
         }
         await (await db.database).update(
           'district',
@@ -153,6 +156,7 @@ class DonneesTest {
     await _insererEgliseTestSiAbsente(db, paroisseCentreId);
     await _insererEgliseAvecHorairesTest(db, paroisseCentreId);
     await _insererEgliseSansFacebookTest(db, paroisseCentreId);
+    await _insererEgliseCompleteTest(db, paroisseCentreId);
     await db.inserer(
       'eglise',
       Eglise(
@@ -389,6 +393,128 @@ class DonneesTest {
         await db.inserer('photo', photo.toJson());
       }
     }
+  }
+
+  static Future<void> _insererEgliseCompleteTest(
+    DatabaseHelper db,
+    int paroisseId,
+  ) async {
+    final responsableExistante = await db.tout(
+      'clerge',
+      where: 'nom = ? AND prenom = ?',
+      whereArgs: ['Randrianarisoa', 'Hery'],
+    );
+    final responsableId = responsableExistante.isNotEmpty
+        ? responsableExistante.first['id'] as int
+        : await db.inserer(
+            'clerge',
+            Clerge(
+              nom: 'Randrianarisoa',
+              prenom: 'Hery',
+              hierarchie: 'Prêtre responsable',
+              telephone: '+261 34 12 345 67',
+              email: 'hery.randrianarisoa@example.com',
+            ).toJson(),
+          );
+
+    final eglisesExistantes = await db.tout(
+      'eglise',
+      where: 'nom = ?',
+      whereArgs: [_nomEgliseCompleteTest],
+    );
+    final egliseId = eglisesExistantes.isNotEmpty
+        ? eglisesExistantes.first['id'] as int
+        : await db.inserer(
+            'eglise',
+            Eglise(
+              nom: _nomEgliseCompleteTest,
+              adresse: 'Lot IVK 25, Ambatonakanga, Antananarivo',
+              localisation: 'POINT(47.5205 -18.9135)',
+              historique:
+                  'Fondée en 1924, l’Église Sainte-Marie est connue pour '
+                  'son architecture traditionnelle anglicane. Elle accueille '
+                  'les offices dominicaux, les célébrations communautaires '
+                  'et les activités sociales du quartier.',
+              lienFacebook: 'https://facebook.com/eglise.anglicane.sainte-marie',
+              paroisseId: paroisseId,
+              responsableId: responsableId,
+            ).toJson(),
+          );
+
+    await (await db.database).update(
+      'eglise',
+      {
+        'adresse': 'Lot IVK 25, Ambatonakanga, Antananarivo',
+        'localisation': 'POINT(47.5205 -18.9135)',
+        'historique':
+            'Fondée en 1924, l’Église Sainte-Marie est connue pour '
+                'son architecture traditionnelle anglicane. Elle accueille '
+                'les offices dominicaux, les célébrations communautaires '
+                'et les activités sociales du quartier.',
+        'lien_facebook':
+            'https://facebook.com/eglise.anglicane.sainte-marie',
+        'paroisse_id': paroisseId,
+        'responsable_id': responsableId,
+      },
+      where: 'id = ?',
+      whereArgs: [egliseId],
+    );
+
+    final horairesExistants = await db.tout(
+      'horaire_culte',
+      where: 'eglise_id = ?',
+      whereArgs: [egliseId],
+    );
+    if (horairesExistants.isEmpty) {
+      await db.inserer(
+        'horaire_culte',
+        HoraireCulte(
+          jour: 'Dimanche',
+          libelle: 'Culte principal',
+          debut: '08:30',
+          fin: '10:30',
+          egliseId: egliseId,
+        ).toJson(),
+      );
+      await db.inserer(
+        'horaire_culte',
+        HoraireCulte(
+          jour: 'Jeudi',
+          libelle: 'Étude biblique',
+          debut: '18:00',
+          fin: '19:30',
+          egliseId: egliseId,
+        ).toJson(),
+      );
+    }
+
+    await _insererPhotosSiAbsentes(
+      db,
+      egliseId,
+      [
+        Photo(
+          url: 'https://picsum.photos/seed/eglise-sainte-marie-1/800/500',
+          description: 'Façade principale de l’église Sainte-Marie',
+          dateAjout: DateTime(2026, 11, 19),
+          typeEntite: 'eglise',
+          entiteId: egliseId,
+        ),
+        Photo(
+          url: 'https://picsum.photos/seed/eglise-sainte-marie-2/800/500',
+          description: 'Intérieur et salle du culte',
+          dateAjout: DateTime(2026, 11, 19),
+          typeEntite: 'eglise',
+          entiteId: egliseId,
+        ),
+        Photo(
+          url: 'https://picsum.photos/seed/eglise-sainte-marie-3/800/500',
+          description: 'Cour et espace communautaire',
+          dateAjout: DateTime(2026, 11, 19),
+          typeEntite: 'eglise',
+          entiteId: egliseId,
+        ),
+      ],
+    );
   }
 
   static Future<void> _insererEgliseTestSiAbsente(
