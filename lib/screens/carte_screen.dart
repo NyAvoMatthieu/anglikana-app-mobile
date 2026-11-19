@@ -11,6 +11,8 @@ import '../models/ressource.dart';
 import '../services/filtre_hierarchie_service.dart';
 import '../services/offline_map_service.dart';
 import '../services/recherche_service.dart';
+import '../database/aca_repository.dart';
+import 'eglise_details_screen.dart';
 import '../utils/geo_utils.dart';
 import '../widgets/filtre_hierarchie_bar.dart';
 
@@ -206,7 +208,10 @@ class _CarteScreenState extends State<CarteScreen> {
             height: 40,
             child: Tooltip(
               message: e.nom,
-              child: const Icon(Icons.church, color: Colors.deepPurple),
+              child: GestureDetector(
+                onTap: () => _afficherDetailsEglise(e),
+                child: const Icon(Icons.church, color: Colors.deepPurple),
+              ),
             ),
           );
         })
@@ -446,6 +451,24 @@ class _CarteScreenState extends State<CarteScreen> {
     });
   }
 
+  Future<void> _afficherDetailsEglise(Eglise eglise) async {
+    if (eglise.id == null) return;
+    final details = await AcaRepository.chargerDetailsEglise(eglise.id!);
+    if (!mounted) return;
+    if (details == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible de charger cette église.')),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => EgliseDetailsScreen(details: details),
+      ),
+    );
+  }
+
   void _appliquerSelectionHierarchie(FiltreHierarchieSelection selection) {
     Diocese? diocese;
     for (final candidat in widget.dioceses) {
@@ -454,6 +477,7 @@ class _CarteScreenState extends State<CarteScreen> {
         break;
       }
     }
+
     setState(() {
       _selection = selection;
       _dioceseValide = diocese;
