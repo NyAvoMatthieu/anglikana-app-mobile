@@ -3,6 +3,7 @@ import '../models/district.dart';
 import '../models/eglise.dart';
 import '../models/horaire_culte.dart';
 import '../models/clerge.dart';
+import '../models/photo.dart';
 import '../models/paroisse.dart';
 import '../models/region.dart';
 import 'database_helper.dart';
@@ -264,6 +265,27 @@ class DonneesTest {
       await db.inserer('horaire_culte', horaire.toJson());
     }
 
+    await _insererPhotosSiAbsentes(
+      db,
+      egliseId,
+      [
+        Photo(
+          url: 'https://picsum.photos/seed/eglise-horaires-1/800/500',
+          description: 'Vue extérieure de l’église de test',
+          dateAjout: DateTime(2026, 11, 16),
+          typeEntite: 'eglise',
+          entiteId: egliseId,
+        ),
+        Photo(
+          url: 'https://picsum.photos/seed/eglise-horaires-2/800/500',
+          description: 'Salle principale pour les cultes',
+          dateAjout: DateTime(2026, 11, 15),
+          typeEntite: 'eglise',
+          entiteId: egliseId,
+        ),
+      ],
+    );
+
   }
 
   static Future<void> _insererEgliseSansFacebookTest(
@@ -335,6 +357,37 @@ class DonneesTest {
           egliseId: egliseId,
         ).toJson(),
       );
+    }
+
+    await _insererPhotosSiAbsentes(
+      db,
+      egliseId,
+      [
+        Photo(
+          url: 'https://picsum.photos/seed/eglise-sans-facebook/800/500',
+          description: 'Façade de l’église sans lien Facebook',
+          dateAjout: DateTime(2026, 11, 16),
+          typeEntite: 'eglise',
+          entiteId: egliseId,
+        ),
+      ],
+    );
+  }
+
+  static Future<void> _insererPhotosSiAbsentes(
+    DatabaseHelper db,
+    int egliseId,
+    List<Photo> photos,
+  ) async {
+    for (final photo in photos) {
+      final existantes = await db.tout(
+        'photo',
+        where: 'type_entite = ? AND entite_id = ? AND url = ?',
+        whereArgs: ['eglise', egliseId, photo.url],
+      );
+      if (existantes.isEmpty) {
+        await db.inserer('photo', photo.toJson());
+      }
     }
   }
 

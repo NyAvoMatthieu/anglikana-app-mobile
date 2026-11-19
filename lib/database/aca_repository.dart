@@ -3,6 +3,7 @@ import '../models/district.dart';
 import '../models/eglise.dart';
 import '../models/eglise_details.dart';
 import '../models/horaire_culte.dart';
+import '../models/photo.dart';
 import '../models/paroisse.dart';
 import '../models/region.dart';
 import '../models/ressource.dart';
@@ -91,11 +92,19 @@ class AcaRepository {
       premiere.remove('responsable_nom'),
     ].whereType<String>().where((value) => value.isNotEmpty).join(' ');
     final eglise = Eglise.fromJson(premiere);
+    final lignesPhotos = await (await DatabaseHelper.instance.database).query(
+      'photo',
+      where: 'type_entite = ? AND entite_id = ?',
+      whereArgs: ['eglise', egliseId],
+      orderBy: 'date_ajout DESC, id ASC',
+    );
+    final photos = lignesPhotos.map(Photo.fromJson).toList();
 
     return EgliseDetails(
       eglise: eglise,
       responsableNom: responsableNom.isEmpty ? null : responsableNom,
       horaires: horaires,
+      photos: photos,
     );
   }
 

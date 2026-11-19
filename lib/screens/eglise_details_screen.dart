@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import '../models/eglise_details.dart';
 
 class EgliseDetailsScreen extends StatelessWidget {
@@ -27,6 +26,46 @@ class EgliseDetailsScreen extends StatelessWidget {
             _Detail(label: 'Historique', value: eglise.historique),
             _Detail(label: 'Lien Facebook', value: eglise.lienFacebook),
             _Detail(label: 'Responsable', value: details.responsableNom),
+            const SizedBox(height: 16),
+            Text(
+              'Photos',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            if (details.photos.isEmpty)
+              const Text('Aucune photo disponible.')
+            else
+              SizedBox(
+                height: 220,
+                child: PageView.builder(
+                  itemCount: details.photos.length,
+                  itemBuilder: (context, index) {
+                    final photo = details.photos[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: _PhotoView(url: photo.url),
+                            ),
+                          ),
+                          if (photo.description?.trim().isNotEmpty == true)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                photo.description!,
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
             const SizedBox(height: 16),
             Text(
               'Horaires de culte',
@@ -79,6 +118,45 @@ class _Detail extends StatelessWidget {
           const SizedBox(height: 4),
           Text(displayValue),
         ],
+      ),
+    );
+  }
+}
+
+class _PhotoView extends StatelessWidget {
+  final String url;
+
+  const _PhotoView({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.startsWith('assets/')) {
+      return Image.asset(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const _PhotoError(),
+      );
+    }
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const _PhotoError(),
+      );
+    }
+    return const _PhotoError();
+  }
+}
+
+class _PhotoError extends StatelessWidget {
+  const _PhotoError();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFFE0E0E0),
+      child: Center(
+        child: Icon(Icons.broken_image_outlined),
       ),
     );
   }
