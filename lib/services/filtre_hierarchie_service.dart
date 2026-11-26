@@ -37,9 +37,18 @@ class FiltreHierarchieService {
     return toutes.where((r) => r.dioceseId == dioceseId).toList();
   }
 
-  static List<District> districtsPour(List<District> tous, int? regionId) {
-    if (regionId == null) return tous;
-    return tous.where((d) => d.regionId == regionId).toList();
+  static List<District> districtsPour(
+    List<District> tous,
+    int? regionId, {
+    Set<int>? regionIds,
+  }) {
+    if (regionId != null) {
+      return tous.where((d) => d.regionId == regionId).toList();
+    }
+    if (regionIds != null) {
+      return tous.where((d) => regionIds.contains(d.regionId)).toList();
+    }
+    return tous;
   }
 
   static List<Paroisse> paroissesPour(List<Paroisse> toutes, int? districtId) {
@@ -98,5 +107,38 @@ class FiltreHierarchieService {
     }
 
     return eglises.where((e) => paroisseIds.contains(e.paroisseId)).toList();
+  }
+
+  /// Ids des diocèses auxquels appartiennent les [eglises], en remontant la
+  /// chaîne Église > Paroisse > District > Région > Diocèse. Les lookups sont
+  /// construits une seule fois, donc l'appel reste peu coûteux même pour une
+  /// longue liste.
+  static Set<int> dioceseIdsDesEglises({
+    required Iterable<Eglise> eglises,
+    required List<Paroisse> paroisses,
+    required List<District> districts,
+    required List<Region> regions,
+  }) {
+    final districtDeParoisse = {
+      for (final p in paroisses)
+        if (p.id != null && p.districtId != null) p.id!: p.districtId!,
+    };
+    final regionDeDistrict = {
+      for (final d in districts)
+        if (d.id != null && d.regionId != null) d.id!: d.regionId!,
+    };
+    final dioceseDeRegion = {
+      for (final r in regions)
+        if (r.id != null && r.dioceseId != null) r.id!: r.dioceseId!,
+    };
+
+    final resultat = <int>{};
+    for (final eglise in eglises) {
+      final districtId = districtDeParoisse[eglise.paroisseId];
+      final regionId = districtId == null ? null : regionDeDistrict[districtId];
+      final dioceseId = regionId == null ? null : dioceseDeRegion[regionId];
+      if (dioceseId != null) resultat.add(dioceseId);
+    }
+    return resultat;
   }
 }

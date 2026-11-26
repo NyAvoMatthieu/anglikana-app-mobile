@@ -12,7 +12,7 @@ import '../models/paroisse.dart';
 class RechercheService {
   RechercheService._();
 
-  static String _normalise(String value) {
+  static String normaliser(String value) {
     const accents = 'àâäáãåèéêëìíîïòóôöõùúûüçñ';
     const sansAccents = 'aaaaaaeeeeiiiiooooouuuucn';
     var result = value.toLowerCase();
@@ -25,11 +25,11 @@ class RechercheService {
   /// Recherche par nom ou adresse. Retourne [eglises] telle quelle si
   /// [query] est vide.
   static List<Eglise> rechercherEglises(List<Eglise> eglises, String query) {
-    final q = _normalise(query.trim());
+    final q = normaliser(query.trim());
     if (q.isEmpty) return eglises;
     return eglises.where((e) {
-      final nomOk = _normalise(e.nom).contains(q);
-      final adresseOk = e.adresse != null && _normalise(e.adresse!).contains(q);
+      final nomOk = normaliser(e.nom).contains(q);
+      final adresseOk = e.adresse != null && normaliser(e.adresse!).contains(q);
       return nomOk || adresseOk;
     }).toList();
   }
@@ -40,11 +40,11 @@ class RechercheService {
     List<Ressource> ressources,
     String query,
   ) {
-    final q = _normalise(query.trim());
+    final q = normaliser(query.trim());
     if (q.isEmpty) return ressources;
     return ressources.where((r) {
-      final nomOk = _normalise(r.nom).contains(q);
-      final adresseOk = r.adresse != null && _normalise(r.adresse!).contains(q);
+      final nomOk = normaliser(r.nom).contains(q);
+      final adresseOk = r.adresse != null && normaliser(r.adresse!).contains(q);
       return nomOk || adresseOk;
     }).toList();
   }
@@ -53,32 +53,32 @@ class RechercheService {
     List<Diocese> dioceses,
     String query,
   ) {
-    final q = _normalise(query.trim());
+    final q = normaliser(query.trim());
     if (q.isEmpty) return dioceses;
-    return dioceses.where((d) => _normalise(d.nom).contains(q)).toList();
+    return dioceses.where((d) => normaliser(d.nom).contains(q)).toList();
   }
 
   static List<Region> rechercherRegions(List<Region> regions, String query) {
-    final q = _normalise(query.trim());
+    final q = normaliser(query.trim());
     if (q.isEmpty) return regions;
-    return regions.where((r) => _normalise(r.nom).contains(q)).toList();
+    return regions.where((r) => normaliser(r.nom).contains(q)).toList();
   }
 
   static List<District> rechercherDistricts(
     List<District> districts,
     String query,
   ) {
-    final q = _normalise(query.trim());
+    final q = normaliser(query.trim());
     if (q.isEmpty) return districts;
-    return districts.where((d) => _normalise(d.nom).contains(q)).toList();
+    return districts.where((d) => normaliser(d.nom).contains(q)).toList();
   }
 
   static List<Paroisse> rechercherParoisses(
     List<Paroisse> paroisses,
     String query,
   ) {
-    final q = _normalise(query.trim());
+    final q = normaliser(query.trim());
     if (q.isEmpty) return paroisses;
-    return paroisses.where((p) => _normalise(p.nom).contains(q)).toList();
+    return paroisses.where((p) => normaliser(p.nom).contains(q)).toList();
   }
 }

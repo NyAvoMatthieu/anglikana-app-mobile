@@ -57,19 +57,38 @@ class _FiltreHierarchieBarState extends State<FiltreHierarchieBar> {
       _rechercheRegion,
     );
 
+    final regionIds = regionsCascade
+        .map((region) => region.id)
+        .whereType<int>()
+        .toSet();
     final districtsCascade = FiltreHierarchieService.districtsPour(
       widget.districts,
       selection.regionId,
+      regionIds: selection.regionId == null && selection.dioceseId != null
+          ? regionIds
+          : null,
     );
     final districts = RechercheService.rechercherDistricts(
       districtsCascade,
       _rechercheDistrict,
     );
 
-    final paroissesCascade = FiltreHierarchieService.paroissesPour(
-      widget.paroisses,
-      selection.districtId,
-    );
+    // Sans district choisi, on limite quand même les paroisses à celles de
+    // la région / du diocèse sélectionné (cascade complète).
+    final districtIdsCascade = districtsCascade
+        .map((district) => district.id)
+        .whereType<int>()
+        .toSet();
+    final paroissesCascade =
+        selection.districtId == null &&
+            (selection.regionId != null || selection.dioceseId != null)
+        ? widget.paroisses
+              .where((p) => districtIdsCascade.contains(p.districtId))
+              .toList()
+        : FiltreHierarchieService.paroissesPour(
+            widget.paroisses,
+            selection.districtId,
+          );
     final paroisses = RechercheService.rechercherParoisses(
       paroissesCascade,
       _rechercheParoisse,
@@ -174,6 +193,10 @@ class _FiltreHierarchieBarState extends State<FiltreHierarchieBar> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DropdownButtonFormField<int?>(
+            // La clé force la reconstruction quand la sélection change depuis
+            // l'extérieur (recherche texte, réinitialisation...), car
+            // initialValue n'est lu qu'à la création du champ.
+            key: ValueKey('$label-$valeurSelectionnee'),
             initialValue: valeurSelectionnee,
             isExpanded: true,
             decoration: InputDecoration(

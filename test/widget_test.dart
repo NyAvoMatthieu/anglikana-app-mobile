@@ -8,32 +8,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:anglikana_app_mobile/main.dart';
+import 'package:anglikana_app_mobile/models/diocese.dart';
+import 'package:anglikana_app_mobile/models/district.dart';
+import 'package:anglikana_app_mobile/models/eglise.dart';
+import 'package:anglikana_app_mobile/models/paroisse.dart';
+import 'package:anglikana_app_mobile/models/region.dart';
+import 'package:anglikana_app_mobile/models/ressource.dart';
+import 'package:anglikana_app_mobile/screens/carte_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(
-      const MyApp(
-        dioceses: [],
-        regions: [],
-        districts: [],
-        paroisses: [],
-        eglises: [],
-        ressources: [],
-      ),
-    );
+  testWidgets(
+    'La carte affiche un bloc unique pour les filtres géographiques.',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CarteScreen(
+            eglises: const <Eglise>[],
+            ressources: const <Ressource>[],
+            dioceses: const <Diocese>[],
+            regions: const <Region>[],
+            districts: const <District>[],
+            paroisses: const <Paroisse>[],
+          ),
+        ),
+      );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
-  });
+      expect(find.text('Filtres géographiques'), findsOneWidget);
+      expect(find.text('Rechercher un diocèse'), findsNothing);
+      expect(find.text('Rechercher une région'), findsNothing);
+      expect(find.text('Rechercher un district'), findsNothing);
+    },
+  );
 }
