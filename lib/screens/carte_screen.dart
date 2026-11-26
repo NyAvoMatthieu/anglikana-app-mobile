@@ -12,6 +12,8 @@ import '../models/ressource.dart';
 import '../services/filtre_hierarchie_service.dart';
 import '../services/offline_map_service.dart';
 import '../services/recherche_service.dart';
+import '../database/aca_repository.dart';
+import 'eglise_details_screen.dart';
 import '../utils/geo_utils.dart';
 import '../widgets/filtre_hierarchie_bar.dart';
 import 'eglise_details_screen.dart';
@@ -237,6 +239,21 @@ class _CarteScreenState extends State<CarteScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      if (polygone != null) {
+        final center = LatLng(
+          points.map((point) => point.latitude).reduce((a, b) => a + b) /
+              points.length,
+          points.map((point) => point.longitude).reduce((a, b) => a + b) /
+              points.length,
+        );
+        final zoom = _selection.districtId != null
+            ? 11.0
+            : _selection.regionId != null
+            ? 9.0
+            : 8.0;
+        _mapController.move(center, zoom);
+        return;
+      }
       if (points.length == 1) {
         _mapController.move(points.first, 15);
         return;
