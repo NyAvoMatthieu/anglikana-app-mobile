@@ -1,14 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
+
+import '../database/aca_repository.dart';
 import '../models/eglise_details.dart';
+import '../utils/geo_utils.dart';
+import '../utils/lien_utils.dart';
+import '../widgets/galerie_photos.dart';
+import 'clerge_details_screen.dart';
 
 class EgliseDetailsScreen extends StatelessWidget {
   final EgliseDetails details;
 
   const EgliseDetailsScreen({super.key, required this.details});
 
+  Future<void> _ouvrirResponsable(BuildContext context) async {
+    final id = details.eglise.responsableId;
+    if (id == null) return;
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final fiche = await AcaRepository.chargerDetailsClerge(id);
+    if (fiche == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Fiche du responsable introuvable.')),
+      );
+      return;
+    }
+    await navigator.push(
+      MaterialPageRoute<void>(
+        builder: (_) => ClergeDetailsScreen(details: fiche),
+      ),
+    );
+  }
+
+  /// « 18.7614° S, 47.5563° E » : lisible, à la place du WKT brut.
+  static String _formaterPoint(LatLng p) {
+    final ns = p.latitude >= 0 ? 'N' : 'S';
+    final eo = p.longitude >= 0 ? 'E' : 'O';
+    return '${p.latitude.abs().toStringAsFixed(5)}° $ns, '
+        '${p.longitude.abs().toStringAsFixed(5)}° $eo';
+  }
+
   @override
   Widget build(BuildContext context) {
     final eglise = details.eglise;
+    final theme = Theme.of(context);
+    final point = GeoUtils.parsePoint(eglise.localisation);
+    final facebook = LienUtils.urlWeb(eglise.lienFacebook);
+    final aResponsable =
+        details.responsableNom != null && eglise.responsableId != null;
+
     return Scaffold(
       appBar: AppBar(title: Text(eglise.nom)),
       body: SingleChildScrollView(
@@ -16,61 +56,57 @@ class EgliseDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              eglise.nom,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+            Text(eglise.nom, style: theme.textTheme.headlineMedium),
             const SizedBox(height: 20),
             _Detail(label: 'Adresse', value: eglise.adresse),
-            _Detail(label: 'Localisation', value: eglise.localisation),
-            _Detail(label: 'Historique', value: eglise.historique),
-            _Detail(label: 'Lien Facebook', value: eglise.lienFacebook),
-            _Detail(label: 'Responsable', value: details.responsableNom),
-            const SizedBox(height: 16),
-            Text(
-              'Photos',
-              style: Theme.of(context).textTheme.titleLarge,
+            _Detail(
+              label: 'Localisation',
+              value: point == null
+                  ? eglise.localisation
+                  : _formaterPoint(point),
+              action: point == null
+                  ? null
+                  : _Action(
+                      icone: Icons.map_outlined,
+                      libelle: 'Ouvrir dans Cartes',
+                      onTap: () => LienUtils.ouvrir(
+                        context,
+                        LienUtils.carte(point, libelle: eglise.nom),
+                      ),
+                    ),
             ),
+            _Detail(label: 'Historique', value: eglise.historique),
+            _Detail(
+              label: 'Page Facebook',
+              value: facebook == null ? null : eglise.lienFacebook!.trim(),
+              action: facebook == null
+                  ? null
+                  : _Action(
+                      icone: Icons.open_in_new,
+                      libelle: 'Ouvrir la page',
+                      onTap: () => LienUtils.ouvrir(context, facebook),
+                    ),
+            ),
+            _Detail(
+              label: 'Responsable',
+              value: details.responsableNom,
+              action: aResponsable
+                  ? _Action(
+                      icone: Icons.person_outline,
+                      libelle: 'Voir la fiche',
+                      onTap: () => _ouvrirResponsable(context),
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 16),
+            Text('Photos', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             if (details.photos.isEmpty)
               const Text('Aucune photo disponible.')
             else
-              SizedBox(
-                height: 220,
-                child: PageView.builder(
-                  itemCount: details.photos.length,
-                  itemBuilder: (context, index) {
-                    final photo = details.photos[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: _PhotoView(url: photo.url),
-                            ),
-                          ),
-                          if (photo.description?.trim().isNotEmpty == true)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                photo.description!,
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
+              GaleriePhotos(photos: details.photos),
             const SizedBox(height: 16),
-            Text(
-              'Horaires de culte',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('Horaires de culte', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             if (details.horaires.isEmpty)
               const Text('Aucun horaire renseigné.')
@@ -83,7 +119,7 @@ class EgliseDetailsScreen extends StatelessWidget {
                     subtitle: Text(horaire.libelle ?? 'Culte'),
                     trailing: Text(
                       '${horaire.debut} - ${horaire.fin}',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: theme.textTheme.bodyMedium,
                     ),
                   ),
                 ),
@@ -95,11 +131,24 @@ class EgliseDetailsScreen extends StatelessWidget {
   }
 }
 
+class _Action {
+  final IconData icone;
+  final String libelle;
+  final VoidCallback onTap;
+
+  const _Action({
+    required this.icone,
+    required this.libelle,
+    required this.onTap,
+  });
+}
+
 class _Detail extends StatelessWidget {
   final String label;
   final String? value;
+  final _Action? action;
 
-  const _Detail({required this.label, required this.value});
+  const _Detail({required this.label, required this.value, this.action});
 
   @override
   Widget build(BuildContext context) {
@@ -111,52 +160,24 @@ class _Detail extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Text(displayValue),
+          if (action != null)
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 36),
+                alignment: Alignment.centerLeft,
+              ),
+              onPressed: action!.onTap,
+              icon: Icon(action!.icone, size: 18),
+              label: Text(action!.libelle),
+            ),
         ],
-      ),
-    );
-  }
-}
-
-class _PhotoView extends StatelessWidget {
-  final String url;
-
-  const _PhotoView({required this.url});
-
-  @override
-  Widget build(BuildContext context) {
-    if (url.startsWith('assets/')) {
-      return Image.asset(
-        url,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const _PhotoError(),
-      );
-    }
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      return Image.network(
-        url,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const _PhotoError(),
-      );
-    }
-    return const _PhotoError();
-  }
-}
-
-class _PhotoError extends StatelessWidget {
-  const _PhotoError();
-
-  @override
-  Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: Color(0xFFE0E0E0),
-      child: Center(
-        child: Icon(Icons.broken_image_outlined),
       ),
     );
   }

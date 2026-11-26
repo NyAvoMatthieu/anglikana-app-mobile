@@ -20,8 +20,9 @@ class DonneesTest {
 
   static const _nomDioceseTest = 'Église Épiscopale Anglicane de Madagascar';
   static const _polygoneDioceseTest =
-      'POLYGON((45.4 -18.4, 44.60 -18.4, 44.60 -19.4, 45.4 -19.4, 45.4 -18.4))';
+      'POLYGON((46.5 -18.0, 48.5 -18.0, 48.5 -20.0, 46.5 -20.0, 46.5 -18.0))';
   static const _nomEgliseDioceseTest = 'Église Anglicane du Diocèse';
+  static const _localisationEgliseDioceseTest = 'POINT(47.50 -18.85)';
   static const _nomEgliseHorairesTest =
       'Église Anglicane Test des Deux Horaires';
   static const _nomEgliseSansFacebookTest =
@@ -29,9 +30,9 @@ class DonneesTest {
   static const _nomEgliseCompleteTest =
       'Église Anglicane Sainte-Marie';
   static const _polygoneDistrictTest =
-      'POLYGON((45.0 -19.2, 45.3 -19.2, 45.3 -19.0, 45.0 -19.0, 45.0 -19.2))';
+      'POLYGON((47.4 -18.7, 47.7 -18.7, 47.7 -19.0, 47.4 -19.0, 47.4 -18.7))';
   static const _polygoneRegionTest =
-      'POLYGON((44.8 -19.5, 45.5 -19.5, 45.5 -18.5, 44.8 -18.5, 44.8 -19.5))';
+      'POLYGON((47.0 -18.5, 48.0 -18.5, 48.0 -19.5, 47.0 -19.5, 47.0 -18.5))';
 
   static Future<void> insererSiVide() async {
     final db = DatabaseHelper.instance;
@@ -247,8 +248,6 @@ class DonneesTest {
       where: 'eglise_id = ?',
       whereArgs: [egliseId],
     );
-    if (horairesExistants.length >= 2) return;
-
     final horaires = [
       HoraireCulte(
         jour: 'Dimanche',
@@ -265,6 +264,7 @@ class DonneesTest {
         egliseId: egliseId,
       ),
     ];
+    // skip() vaut 0 si aucun horaire, 2 s'ils existent déjà (rien à ajouter).
     for (final horaire in horaires.skip(horairesExistants.length)) {
       await db.inserer('horaire_culte', horaire.toJson());
     }
@@ -378,16 +378,17 @@ class DonneesTest {
     );
   }
 
+  /// Insère les photos absentes (église ou clergé, selon `typeEntite`).
   static Future<void> _insererPhotosSiAbsentes(
     DatabaseHelper db,
-    int egliseId,
+    int entiteId,
     List<Photo> photos,
   ) async {
     for (final photo in photos) {
       final existantes = await db.tout(
         'photo',
         where: 'type_entite = ? AND entite_id = ? AND url = ?',
-        whereArgs: ['eglise', egliseId, photo.url],
+        whereArgs: [photo.typeEntite, photo.entiteId, photo.url],
       );
       if (existantes.isEmpty) {
         await db.inserer('photo', photo.toJson());
@@ -416,6 +417,16 @@ class DonneesTest {
               email: 'hery.randrianarisoa@example.com',
             ).toJson(),
           );
+
+    await _insererPhotosSiAbsentes(db, responsableId, [
+      Photo(
+        url: 'https://picsum.photos/seed/clerge-hery-randrianarisoa/400/400',
+        description: 'Portrait du père Hery Randrianarisoa',
+        dateAjout: DateTime(2026, 11, 19),
+        typeEntite: 'clerge',
+        entiteId: responsableId,
+      ),
+    ]);
 
     final eglisesExistantes = await db.tout(
       'eglise',
@@ -526,14 +537,22 @@ class DonneesTest {
       where: 'nom = ?',
       whereArgs: [_nomEgliseDioceseTest],
     );
-    if (egliseExistante.isNotEmpty) return;
+    if (egliseExistante.isNotEmpty) {
+      await (await db.database).update(
+        'eglise',
+        {'localisation': _localisationEgliseDioceseTest},
+        where: 'id = ?',
+        whereArgs: [egliseExistante.first['id']],
+      );
+      return;
+    }
 
     await db.inserer(
       'eglise',
       Eglise(
         nom: _nomEgliseDioceseTest,
         adresse: 'Dans le diocèse de test',
-        localisation: 'POINT(45.00 -19.00)',
+        localisation: _localisationEgliseDioceseTest,
         paroisseId: paroisseId,
       ).toJson(),
     );

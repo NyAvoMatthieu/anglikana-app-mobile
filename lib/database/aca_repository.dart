@@ -1,3 +1,5 @@
+import '../models/clerge.dart';
+import '../models/clerge_details.dart';
 import '../models/diocese.dart';
 import '../models/district.dart';
 import '../models/eglise.dart';
@@ -48,6 +50,29 @@ class AcaRepository {
     return lignes.map(Eglise.fromJson).toList();
   }
 
+  static const _ordreJours = [
+    'lundi',
+    'mardi',
+    'mercredi',
+    'jeudi',
+    'vendredi',
+    'samedi',
+    'dimanche',
+  ];
+
+  /// Tri par jour de la semaine (lundi -> dimanche) puis par heure de début ;
+  /// un jour inconnu passe en dernier. Le tri SQL « ORDER BY h.jour » ne
+  /// donnait que l'ordre alphabétique (Dimanche, Jeudi, Mercredi...).
+  static int _comparerHoraires(HoraireCulte a, HoraireCulte b) {
+    int rang(String jour) {
+      final i = _ordreJours.indexOf(jour.trim().toLowerCase());
+      return i < 0 ? _ordreJours.length : i;
+    }
+
+    final parJour = rang(a.jour).compareTo(rang(b.jour));
+    return parJour != 0 ? parJour : a.debut.compareTo(b.debut);
+  }
+
   static Future<EgliseDetails?> chargerDetailsEglise(int egliseId) async {
     final lignes = await (await DatabaseHelper.instance.database).rawQuery(
       '''
@@ -84,7 +109,8 @@ class AcaRepository {
             egliseId: ligne['horaire_eglise_id'] as int?,
           ),
         )
-        .toList();
+        .toList()
+      ..sort(_comparerHoraires);
     premiere.removeWhere((key, _) => key.startsWith('horaire_'));
 
     final responsableNom = [
@@ -105,6 +131,54 @@ class AcaRepository {
       responsableNom: responsableNom.isEmpty ? null : responsableNom,
       horaires: horaires,
       photos: photos,
+    );
+  }
+
+  /// Charge un membre du clergé par son id (null s'il n'existe pas).
+  static Future<Clerge?> chargerClerge(int clergeId) async {
+    final lignes = await DatabaseHelper.instance.tout(
+      'clerge',
+      where: 'id = ?',
+      whereArgs: [clergeId],
+    );
+    if (lignes.isEmpty) return null;
+    return Clerge.fromJson(lignes.first);
+  }
+
+  /// Charge la fiche complète d'un membre du clergé : identité, libellé du
+  /// rôle et photos (`type_entite = 'clerge'`).
+  static Future<ClergeDetails?> chargerDetailsClerge(int clergeId) async {
+    final db = await DatabaseHelper.instance.database;
+    final lignes = await db.rawQuery(
+      '''
+      SELECT c.*, r.nom AS role_nom
+      FROM clerge c
+      LEFT JOIN role r ON r.id = c.role_id
+      WHERE c.id = ?
+      ''',
+      [clergeId],
+    );
+    if (lignes.isEmpty) return null;
+
+    final ligne = Map<String, dynamic>.from(lignes.first);
+    final roleNom = ligne.remove('role_nom') as String?;
+    final lignesPhotos = await db.query(
+      'photo',
+      where: 'type_entite = ? AND entite_id = ?',
+      whereArgs: ['clerge', clergeId],
+      orderBy: 'date_ajout DESC, id ASC',
+    );
+    final lignesEglises = await db.query(
+      'eglise',
+      where: 'responsable_id = ?',
+      whereArgs: [clergeId],
+      orderBy: 'nom',
+    );
+    return ClergeDetails(
+      clerge: Clerge.fromJson(ligne),
+      roleNom: roleNom,
+      photos: lignesPhotos.map(Photo.fromJson).toList(),
+      eglises: lignesEglises.map(Eglise.fromJson).toList(),
     );
   }
 

@@ -1,7 +1,7 @@
-import 'dart:io';
+// import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+// import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'database/aca_repository.dart';
 import 'database/database_helper.dart';
@@ -14,16 +14,17 @@ import 'models/region.dart';
 import 'models/ressource.dart';
 import 'screens/carte_screen.dart';
 import 'services/offline_map_service.dart';
+import 'database/debug_qgis.dart'; // pour debugger les coordonnées GPS des églises avec QGIS
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialiser SQLite pour les applications desktop.
   // Android et iOS continuent d'utiliser leur implémentation habituelle.
-  if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
+  // if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+  //   sqfliteFfiInit();
+  //   databaseFactory = databaseFactoryFfi;
+  // }
 
   // Initialiser le service de cartes hors ligne.
   await OfflineMapService.initialise();
@@ -41,6 +42,8 @@ Future<void> main() async {
   final paroisses = await AcaRepository.chargerParoisses();
   final eglises = await AcaRepository.chargerEglises();
   final ressources = await AcaRepository.chargerRessources();
+
+  await DebugQgis.inspecter(); // inspecter les donnees QGIS
 
   runApp(
     MyApp(
