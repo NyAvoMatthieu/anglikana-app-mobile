@@ -1,7 +1,7 @@
-// import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
-// import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'database/aca_repository.dart';
 import 'database/database_helper.dart';
@@ -21,10 +21,10 @@ Future<void> main() async {
 
   // Initialiser SQLite pour les applications desktop.
   // Android et iOS continuent d'utiliser leur implémentation habituelle.
-  // if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
-  //   sqfliteFfiInit();
-  //   databaseFactory = databaseFactoryFfi;
-  // }
+  if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
 
   // Initialiser le service de cartes hors ligne.
   await OfflineMapService.initialise();
@@ -80,9 +80,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'ACA',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       home: CarteScreen(
         dioceses: dioceses,
